@@ -4,14 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mes-apml-loss-preview"
-version = "0.2.0"
-description = "Unpublished educational implementation of original APML and MES objectives"
+version = "0.2.1"
+description = "Private review: independent educational PyTorch implementation of 2023 APML and MES"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["torch>=2.1"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+# dev includes every dependency used by the offline test suite and figure script.
+dev = ["numpy>=1.24", "matplotlib>=3.7", "pytest>=7", "Pillow>=9"]
 viz = ["numpy>=1.24", "matplotlib>=3.7"]
 movie = ["numpy>=1.24", "matplotlib>=3.7", "torchvision>=0.16", "Pillow>=9"]
 
