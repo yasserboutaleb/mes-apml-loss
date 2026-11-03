@@ -10,8 +10,9 @@
 - [x] Separate synthetic/analytic illustrations from real educational training and benchmark evidence.
 - [x] Reproducibility commands centralized under scripts/reproduce.py.
 - [x] Static mathematical tests, gradient tests, CLI no-overwrite tests and offline movie tests committed.
-- [x] GitHub Actions workflow configured for offline tests and figure generation.
-- [ ] Confirm latest GitHub Actions run **completed successfully**; commits alone are not test results.
+- [x] Automatic GitHub Actions workflow removed at the owner's request: **no more automatic CI on this branch**.
+- [x] A previous one-time GitHub-hosted verification completed successfully with 30 tests, before CI was removed.
+- [ ] Re-run checks locally whenever sources change (or review the exact diff); no CI is currently configured.
 - [ ] Execute the genuine MNIST demo on at least one supported desktop/CPU or GPU environment; do not claim it ran here.
 - [ ] Review the rendered README figures on GitHub and test the output from a clean checkout.
 - [ ] Optionally provide a separate *genuine* Softmax vs APML+MES experiment if that comparison is used in public promotion.
