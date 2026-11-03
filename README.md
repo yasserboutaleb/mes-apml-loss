@@ -66,11 +66,11 @@ $$
 
 ## A real MNIST experiment: four learned class centers in 3D
 
-The figures below come from **trained neural networks**, not a hand-drawn tetrahedron. We used MNIST digits **1, 2, 3 and 4**, a directly learned three-dimensional embedding, **10 training epochs**, Adam with learning rate **0.001**, and **MES weight beta = 1**. The methods used the same dataset selection and the example below shows seed **42**.
+The figures below come from **trained neural networks**, not a hand-drawn tetrahedron. The first shows 220 fixed MNIST test embeddings from each model, together with its four trainable class proxies. We used MNIST digits **1, 2, 3 and 4**, a directly learned three-dimensional embedding, **10 training epochs**, Adam with learning rate **0.001**, and **MES weight beta = 1**. The methods used the same dataset selection and the example below shows seed **42**.
 
 ![Measured trainable 3D class-proxy positions from APML and APML + MES, with all six original 3D edge distances](figures/06_mnist_trained_proxies.svg)
 
-*Figure 1 — Actual learned **class-proxy weights**, projected into 2D only for display. Each colored vertex is the learned proxy for one MNIST digit; each line connects a proxy pair. The six edge lengths are measured in **the original 3D space**, not in the 2D projection. After training, the minimum/mean pair-distance ratio is **0.7824 for APML** and **0.99998 for APML + MES** (seed 42). The projections need not look like a perfectly regular 2D tetrahedron.*
+*Figure 1 — Actual held-out MNIST embeddings (small dots) and learned **class-proxy weights** (large colored vertices), all orthographically projected into 2D only for display. Each vertex represents one digit and each line connects a proxy pair. The six edge lengths are measured in **the original 3D space**, not in the 2D projection. After training, the minimum/mean pair-distance ratio is **0.7824 for APML** and **0.99998 for APML + MES** (seed 42). The projections need not look like a perfectly regular 2D tetrahedron.*
 
 **Why does this happen?** Four distinct equidistant centers can form a regular tetrahedron in three dimensions. MES penalizes differences between **squared** pair distances, encouraging a configuration close to this geometry when APML maintains distinct centers. MES **does not** itself force the centers to remain separated or guarantee a tetrahedron.
 
