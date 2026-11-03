@@ -1,46 +1,67 @@
-# Usage and reproducibility
+# Reproducing MES-loss: one entry point, three levels
 
-## Local setup
+**Private prepublication review.** This is an independent PyTorch implementation of original 2023 APML+MES. It is not yet a licensed public release.
 
-Python >=3.10 and a CPU version of PyTorch are sufficient. Install locally in editable mode with `python -m pip install -e '.[dev,viz]'`. No network access or dataset download is required **after dependencies are installed**. Do not upload or publish this draft without authorization.
+## Install
 
-## Code, tests and computation
+Python 3.10+ and a compatible PyTorch/torchvision combination are required. In the environment of your choice, from the repository root:
 
-```bash
-python examples/quickstart_torch.py
-python -m pytest -q
-python scripts/make_figures.py --out figures
-```
+~~~bash
+python -m pip install -e ".[dev,movie]"
+~~~
 
-The PyTorch implementation uses raw embeddings, shared trainable class proxies, squared Euclidean distances, Cauchy affinity logits, and population variance over unordered distinct pairs. Tests use float64, independent numerical calculations, known exact configurations, analytic gradients, and finite differences.
+CPU is sufficient for tests, figures and the small offline shapes demo. MP4 requires FFmpeg on PATH; it is not required for mathematical tests.
 
-## Figure policy
+## Reproduction matrix
 
-All current figures are **synthetic toy calculations or analytic constructions**. They are not MNIST, CUB, Cars, or experimentally measured test-set results.
+| Goal | Command | Required data | Output |
+|---|---|---|---|
+| Validate mathematics | python scripts/reproduce.py check | None | Pytest |
+| Test training API | python scripts/reproduce.py quickstart | Generated toy vectors | Printed loss values |
+| Recreate illustrations | python scripts/reproduce.py figures | Generated vectors | SVG, PNG, manifest |
+| Offline actual training | python scripts/reproduce.py smoke --out runs/shapes_smoke_42 | Generated procedural images | Actual embeddings/proxy snapshots |
+| MNIST 4-digit training | python scripts/reproduce.py mnist --out runs/mnist_1234_seed42 --video | MNIST official TRAIN split | Two trained models, snapshots, MP4 |
 
-- Figure 1: two **matched** objective runs on fixed 3D toy data. Same data, initial class proxies, optimizer, steps, seed, and 3D plot limits. MES coefficient is the only optimized-condition difference. Proxies move; embeddings do not.
-- Figure 2: explanatory vector flowchart, no experimental data.
-- Figure 3: ideal four-point regular tetrahedron with known coordinates and six equal squared distances.
-- Figure 4: six unordered squared pair distances computed from the two Figure 1 proxy sets; values match the MES formula.
-- Figure 5: analytic tetrahedron and illustrative octahedron configurations in 3D with explicit distinct pairwise squared distances. Not claimed as a learned optimum.
+Each run requires a **new, empty output path**. The script will not delete or replace prior training runs.
 
-Regenerate by running `scripts/make_figures.py`. Fixed seed/optimizer values are embedded in that script and also written to `figures/manifest.json`. SVG files are accompanied by high-resolution PNG alternatives.
+## Exact commands
 
-## Optional MNIST cluster-film protocol — script available, real-data run pending
+### A. Verify the loss and its gradients
 
-A self-contained, scientifically controlled educational video protocol is now
-implemented in `scripts/cluster_movie.py`. It records 3D encoder outputs and
-proxy weights throughout genuine paired training, using the same seeded MNIST
-*train* holdout and minibatch schedule in both arms. It saves raw NPZ
-snapshots, a metric history, the latest live preview, and optionally an MP4.
-The full protocol is in [cluster movie guide](cluster_movie_guide.md).
+~~~bash
+python scripts/reproduce.py check
+python scripts/reproduce.py quickstart
+~~~
 
-Its complete offline procedural-shapes path has been tested end-to-end, but
-no downloaded MNIST training has been executed in this isolated environment.
-Dataset access, permissions, training convergence, and reproducibility on
-the eventual target machine require local validation. Results must not be
-transplanted or inferred from private research runs.
+The tests independently check the Cauchy-affinity probabilities, population variance of unique **squared** distances, analytical and finite-difference gradients, tetrahedron, scale/translation invariances, collapse and the C=2 case.
 
-## Limits of reproduction
+### B. Regenerate deterministic figures
 
-Floating-point results can vary slightly across PyTorch versions and CPUs. The synthetic tests use wide enough tolerances for numerically stable float64 calculations. Actual benchmark parity, TensorFlow parity, and pretrained checkpoints are explicitly out of scope for this first draft.
+~~~bash
+python scripts/reproduce.py figures
+~~~
+
+Five figures come from a deterministic analytic/synthetic generator. The generator writes the seed and synthetic run outcomes to figures/manifest.json. Committed SVGs are available immediately; PNGs and the manifest are created by this command. **Synthetic fixed embeddings are not MNIST evidence.**
+
+### C. Record real, paired MNIST 3D training
+
+~~~bash
+python scripts/reproduce.py mnist --out runs/mnist_1234_seed42 --video
+~~~
+
+- The educational preset uses seed 42, digits 1/2/3/4, dimension 3, eight epochs and MES beta=0.2.
+- **APML alone** is compared with **APML+MES**, not with Softmax. Any Softmax comparison needs a separate actual trained baseline.
+- Both arms start with the same network weights and process the same minibatches.
+- The visualized examples are fixed, disjoint holdout examples selected only from the MNIST **training** split.
+- Snapshots are true model states. A video may duplicate frames, but not interpolate learned coordinates.
+- The command is a **new educational protocol**, not the 2023 paper's benchmark training or open-set retrieval experiment.
+
+For video configuration and live monitoring, see [the cluster movie guide](cluster_movie_guide.md). Without FFmpeg, omit --video to collect snapshots, or use the underlying render command to generate PNGs.
+
+## Scientific provenance
+
+Preserve the command, commit SHA, seeds, software versions, input split hashes, configuration, exact saved NPZ snapshots, and measured metrics. Distinguish **analytic**, **synthetic**, **actual educational MNIST**, and **published benchmark** materials. Cross-hardware bit-for-bit numerical identity is not assumed.
+
+MES regularizes relative homogeneity of squared distances but is scale-sensitive, and zero MES includes collapsed class proxies. It does not itself guarantee positive max-min separation or retrieval generalization.
+
+**Rights and publication:** the private draft has no approved software redistribution license. Respect the approval checklist before changing repository visibility or releasing generated media publicly.
