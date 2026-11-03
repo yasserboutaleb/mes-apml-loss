@@ -32,10 +32,10 @@ A stable implementation uses class logits $-\log(1+\|z_i-w_k\|_2^2)$ and cross-e
 
 ### 2. MES — variance of *squared* inter-proxy distances
 
-For each **unordered distinct** pair $j<k$, define $q_{jk}=\|w_j-w_k\|_2^2$, $M=\binom{C}{2}$, and $\mu=M^{-1}\sum_{j<k}q_{jk}$. Then
+For each **unordered distinct** proxy pair with indices $j \lt k$, define $q_{jk}=\lVert w_j-w_k\rVert_2^2$, $M=\binom{C}{2}$, and $\mu=M^{-1}\sum_{j \lt k}q_{jk}$. Then
 
 $$
-\boxed{\mathcal L_{\mathrm{MES}}(W)=\frac1M\sum_{j<k}(q_{jk}-\mu)^2}.
+\mathcal{L}_{\mathrm{MES}}(W)=\frac{1}{M}\sum_{j \lt k}(q_{jk}-\mu)^2.
 $$
 
 This is the **population variance** of the $M$ squared distances—not sample variance and not the variance of the unsquared distances.
