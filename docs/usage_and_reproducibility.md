@@ -1,6 +1,6 @@
 # Reproducing MES-loss: one entry point, three levels
 
-**Private prepublication review.** This is an independent PyTorch implementation of original 2023 APML+MES. It is not yet a licensed public release.
+This repository implements the original 2023 APML+MES objective in PyTorch, with a small educational reproduction workflow. The code is distributed under the [MIT license](../LICENSE).
 
 ## Install
 
@@ -64,4 +64,4 @@ Preserve the command, commit SHA, seeds, software versions, input split hashes, 
 
 MES regularizes relative homogeneity of squared distances but is scale-sensitive, and zero MES includes collapsed class proxies. It does not itself guarantee positive max-min separation or retrieval generalization.
 
-**Rights and publication:** the private draft has no approved software redistribution license. Respect the approval checklist before changing repository visibility or releasing generated media publicly.
+**License and citations:** source code is under the [MIT license](../LICENSE). Cite the [2023 paper](https://doi.org/10.1016/j.patrec.2023.06.005) for the scientific method. MNIST data and third-party software keep their own licensing terms.
