@@ -1,0 +1,46 @@
+# Python bytecode, packaging, and caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+
+# Local notebooks and editor state
+.ipynb_checkpoints/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets, private environment files, and local settings
+.env
+.env.*
+!*.example
+*.pem
+*.key
+
+# Datasets, training runs, snapshots, and derived video exports
+/data/
+/runs/
+/outputs/
+/checkpoints/
+/snapshots/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.h5
+*.npz
+*.mp4
+*.mov
+*.avi
+*.log
+
+# Local test coverage
+.coverage
+htmlcov/
