@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mes-apml-loss-preview"
+name = "mes-apml-loss"
 version = "0.2.1"
-description = "Private review: independent educational PyTorch implementation of 2023 APML and MES"
+description = "PyTorch implementation and reproducible educational demos for the 2023 APML and MES loss"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["torch>=2.1"]
