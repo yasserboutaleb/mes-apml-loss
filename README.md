@@ -106,7 +106,7 @@ For an interpretable, dimensionless *diagnostic* (not an alternate loss), plot $
 - [MNIST real-snapshot video protocol](docs/cluster_movie_guide.md)
 - [References and published article](docs/references.md)
 
-**Cite the journal article** when discussing MES-loss:  
+**Cite the journal article** when discussing MES-loss ([BibTeX](CITATION.bib)):  
 Boutaleb, Y., Soladié, C., Duong, N.-D., Kacete, A., Royan, J., and Séguier, R. (2023). *MES-loss: Mutually Equidistant Separation Metric Learning Loss Function*. **Pattern Recognition Letters 172**, 58–64. https://doi.org/10.1016/j.patrec.2023.06.005
 
 **Publication gate:** repository visibility, code ownership, license, software authorship, and any use of publisher figures remain subject to explicit approval. No internal research-lab campaigns, CUB official test data, unpublished MES variants, or proprietary checkpoints belong in this repository. See [publication checklist](docs/GIT_PUBLICATION_CHECKLIST.md).
