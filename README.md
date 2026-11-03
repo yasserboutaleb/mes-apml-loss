@@ -5,7 +5,7 @@
 Yasser Boutaleb, Catherine Soladié, Nam-Duong Duong, Amine Kacete, Jérôme Royan, Renaud Séguier  
 *Pattern Recognition Letters*, 172, 58–64 (2023) · [Read the paper](https://doi.org/10.1016/j.patrec.2023.06.005) · [BibTeX](CITATION.bib)
 
-> **Private scientific preview.** This educational implementation has not yet been approved for redistribution. It does not claim to reproduce the paper's benchmark results.
+> **Scope.** This repository provides a compact PyTorch implementation of the published APML + MES loss, together with educational demonstrations. The MNIST illustrations are **not** the paper's original benchmark reproduction.
 
 ## The idea
 
@@ -131,4 +131,4 @@ For a fast dataset-free training smoke test, use the smoke command in [the repro
 
 **Citation:** Boutaleb *et al.*, “MES-loss: Mutually Equidistant Separation Metric Learning Loss Function,” *Pattern Recognition Letters* **172**, 58–64 (2023). [DOI](https://doi.org/10.1016/j.patrec.2023.06.005).
 
-**Publication status:** no public release, merger, or software license is approved by this draft. See [publication checklist](docs/GIT_PUBLICATION_CHECKLIST.md).
+**License:** MIT for the code in this repository (see [LICENSE](LICENSE)). Cite the [2023 journal article](https://doi.org/10.1016/j.patrec.2023.06.005) when discussing the scientific method. Dataset and third-party assets retain their own applicable terms.
