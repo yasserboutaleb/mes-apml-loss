@@ -50,9 +50,9 @@ $$
 
 MES is simply the population variance of these pairwise squared distances:
 
-$$
-\mathcal{L}_{\mathrm{MES}}=\operatorname{Var}_{j<k}(q_{jk})
-$$
+$
+\mathcal{L}_{\mathrm{MES}}=\frac{1}{M}\sum_{j<k}(q_{jk}-\bar{q})^2
+$
 
 That is, the loss becomes small when the pairwise squared distances become similar. **MES does not prescribe how large those distances must be.** The exact finite-sum definition is in [the mathematical notes](docs/mathematical_formulation.md).
 
@@ -64,17 +64,25 @@ $$
 
 **One set of class centers, two jobs:** APML learns discrimination; MES encourages a more regular arrangement of those same centers.
 
-## Why a tetrahedron appears with four classes in 3D
+## A real MNIST experiment: four learned class centers in 3D
 
-Four distinct points *can* have six equal pairwise distances in three dimensions. Their shape is a **regular tetrahedron**.
+The figures below come from **trained neural networks**, not a hand-drawn tetrahedron. We used MNIST digits **1, 2, 3 and 4**, a directly learned three-dimensional embedding, **10 training epochs**, Adam with learning rate **0.001**, and **MES weight beta = 1**. The methods used the same dataset selection and the example below shows seed **42**.
 
-![Analytic regular tetrahedron showing four class-proxy positions and six equal edges](figures/03_ideal_tetrahedron.svg)
+![Measured trainable 3D class-proxy positions from APML and APML + MES, with all six original 3D edge distances](figures/06_mnist_trained_proxies.svg)
 
-*Geometric reference, not trained model weights: the four displayed vertices have six identical squared distances, all equal to 8.*
+*Figure 1 — Actual learned **class-proxy weights**, projected into 2D only for display. Each colored vertex is the learned proxy for one MNIST digit; each line connects a proxy pair. The six edge lengths are measured in **the original 3D space**, not in the 2D projection. After training, the minimum/mean pair-distance ratio is **0.7824 for APML** and **0.99998 for APML + MES** (seed 42). The projections need not look like a perfectly regular 2D tetrahedron.*
 
-More generally, $C$ **distinct equidistant** points require at least $C-1$ dimensions. This explains why a tetrahedron is geometrically possible for **4 classes in 3D**. It does **not** guarantee that training will reach one.
+**Why does this happen?** Four distinct equidistant centers can form a regular tetrahedron in three dimensions. MES penalizes differences between **squared** pair distances, encouraging a configuration close to this geometry when APML maintains distinct centers. MES **does not** itself force the centers to remain separated or guarantee a tetrahedron.
 
-**Important distinction:** MES alone also assigns zero loss to *collapsed* centers. APML provides the data-dependent discriminative objective, while MES regularizes their arrangement. Neither tetrahedral convergence nor better retrieval on unseen classes is mathematically guaranteed. [See the proof and limitations](docs/mathematical_formulation.md).
+### Is this pattern specific to one initialization?
+
+We repeated this controlled four-class protocol with seeds **42, 43 and 44**:
+
+![Three-seed equidistance comparison for trained APML versus APML + MES](figures/07_mnist_c4_three_seed_regularity.svg)
+
+*Figure 2 — Ratio of the smallest to mean **Euclidean** distance between learned class proxies, computed independently for each seed. A value of **1** means equidistant centers. APML + MES reaches about **0.99998** for all three seeds; APML alone varies from **0.782** to **0.978**. Three seeds support this descriptive observation but do not establish general statistical significance or improved retrieval on unseen classes.*
+
+These are **educational MNIST experiments**, not an exact reproduction of the paper's benchmark protocol. Figure measurements are from the author's archived trained runs; the separate [quickstart video recipe](docs/cluster_movie_guide.md) uses a different educational preset. See [experimental provenance and exact metrics](docs/mnist_c4_evidence.md).
 
 ## Reproduce the method
 
