@@ -1,152 +1,153 @@
-# MES-loss: concise mathematical formulation
+# Mathematical formulation — APML and MES
 
-This note describes the **original 2023 APML+MES objective**, not a modified or scale-normalized regularizer. The notation and identities below are mathematical consequences of the stated loss. The code's implementation can be checked in [torch_backend.py](../src/mes_apml/torch_backend.py).
+This document describes the **original MES-loss method** in the 2023 paper. It first gives the intuition, then the exact definitions, and finally the useful geometric properties. See the [trained four-class MNIST example](mnist_c4_evidence.md).
 
-## Setup: one set of shared, trainable class proxies
+## 1. Shared learned class proxies
 
-For $N$ labeled examples $(x_i,y_i)$, let $z_i=f_\theta(x_i)\in\mathbb R^d$. Let $W=(w_1,\ldots,w_C)$ be $C$ learnable class-proxy vectors, $w_k\in\mathbb R^d$. These proxies are the classification-head parameters **rather than empirical minibatch centroids**.
-
-For each example and proxy, set
+A network maps an input to an embedding. Each class has a **trainable proxy** (a model parameter, not a minibatch centroid).
 
 $$
-r_{ik}=\|z_i-w_k\|_2^2,\qquad
-\ell_{ik}=-\log(1+r_{ik}).
+z_i=f_{\theta}(x_i), \qquad w_k\in\mathbb{R}^{d}
 $$
 
-The normalized Cauchy affinity is
+There are $N$ labeled training samples, $C$ classes, and $C$ proxy vectors.
+
+## 2. APML — discriminate
+
+APML uses a Cauchy-like affinity: samples close to a proxy receive a larger affinity.
 
 $$
-p_{ik}=\frac{e^{\ell_{ik}}}{\sum_{j=1}^C e^{\ell_{ij}}}
-      =\frac{(1+r_{ik})^{-1}}{\sum_{j=1}^C(1+r_{ij})^{-1}}.
+a_{ik}=\frac{1}{1+\|z_i-w_k\|^2}
 $$
 
-Thus, with $\operatorname{CE}$ denoting cross-entropy,
+Normalize these affinities to obtain class probabilities:
 
 $$
-\boxed{\mathcal L_{\rm APML}
-=-\frac1N\sum_{i=1}^N\log p_{i,y_i}
-=\frac1N\sum_{i=1}^N\operatorname{CE}(\ell_i,y_i).}
+p_{ik}=\frac{a_{ik}}{\sum_{j=1}^{C}a_{ij}}
 $$
 
-This is a logit-based *implementation* of the original Cauchy-affinity objective; it adds **no** new temperature, fixed margin, or L2 normalization.
-
-## MES: variance of squared distances
-
-Let $\mathcal P=\{(j,k):1\le j<k\le C\}$ and $M=|\mathcal P|=\binom C2$. Define
+APML penalizes low probability for the true class $y_i$:
 
 $$
-q_{jk}=\|w_j-w_k\|_2^2,\qquad
-\mu=\frac1M\sum_{j<k}q_{jk}.
+L_{\mathrm{APML}}=-\frac{1}{N}\sum_{i=1}^{N}\log p_{i,y_i}
 $$
 
-The original MES term is
+**Implementation note:** using logits $\ell_{ik}=-\log(1+\|z_i-w_k\|^2)$ and standard cross-entropy gives the same objective. No additional normalization, temperature, or margin is used.
+
+## 3. MES — organize the same class proxies
+
+Compute the **squared Euclidean distance** between each unordered pair of distinct class proxies:
 
 $$
-\boxed{
-V(W)=\mathcal L_{\rm MES}(W)
-=\frac1M\sum_{j<k}(q_{jk}-\mu)^2.
-}
+q_{jk}=\|w_j-w_k\|^2, \qquad j<k
 $$
 
-Each unordered pair is counted **once**; the divisor is $M$, not $M-1$. Squared distances are essential: this is **not** the variance of ordinary Euclidean distances.
-
-The published composite loss is
+For $C$ classes, there are $M=C(C-1)/2$ distinct pairs. Let their mean squared distance be
 
 $$
-\boxed{\mathcal L(\theta,W)
-=\alpha\mathcal L_{\rm APML}(\theta,W)+\beta V(W),\qquad
-\alpha,\beta\ge0.}
+\bar{q}=\frac{1}{M}\sum_{j<k}q_{jk}
 $$
 
-Both terms act on the **same** $W$, making the regularizer directly relevant to the classification geometry.
-
-## Gradients: how the two objectives influence learning
-
-Define $h_{ik}=\mathbf1[y_i=k]$. For the embeddings and proxies, respectively,
+The original MES loss is the **population variance** of these squared distances:
 
 $$
-\boxed{\frac{\partial \mathcal L_{\rm APML}}{\partial z_i}
-=\frac2N\sum_{k=1}^C
-(h_{ik}-p_{ik})\frac{z_i-w_k}{1+r_{ik}}}
+L_{\mathrm{MES}}=\frac{1}{M}\sum_{j<k}(q_{jk}-\bar{q})^2
 $$
 
-and
+When the six distances between four *distinct* proxies become equal, MES becomes zero and the proxies form a regular tetrahedron in 3D. However, **MES is also zero if the proxies collapse into one point.** The MES term by itself does not enforce a target radius, a minimum distance, or separation.
+
+## 4. Joint training — discrimination plus geometry
+
+Both objectives act on the **same** proxy parameters:
 
 $$
-\boxed{\frac{\partial \mathcal L_{\rm APML}}{\partial w_k}
-=\frac2N\sum_{i=1}^N
-(h_{ik}-p_{ik})\frac{w_k-z_i}{1+r_{ik}}.}
+L=\alpha L_{\mathrm{APML}}+\beta L_{\mathrm{MES}}
 $$
 
-MES has an exact center gradient:
+APML directly trains both the embeddings and proxies; MES acts directly on proxies and influences the encoder **indirectly** through subsequent APML optimization.
+
+## 5. What the gradients do (technical detail)
+
+For $\ell_{ik}=-\log(1+\|z_i-w_k\|^2)$ and $h_{ik}=1$ when $y_i=k$ (zero otherwise), the APML gradient on an embedding is
 
 $$
-\boxed{
-\nabla_{w_k}V
-=\frac4M\sum_{j\ne k}(q_{kj}-\mu)(w_k-w_j).
-}
+\frac{\partial L_{\mathrm{APML}}}{\partial z_i}
+=\frac{2}{N}\sum_{k=1}^{C}
+(h_{ik}-p_{ik})\frac{z_i-w_k}{1+\|z_i-w_k\|^2}
 $$
 
-The contribution from differentiating $\mu$ cancels because $\sum_{j<k}(q_{jk}-\mu)=0$. MES contains no $z_i$, so for independently parametrized $W$ and $\theta$, it contributes **no direct** gradient to the encoder. The encoder can still be affected indirectly via later APML updates as the learned proxies change.
-
-## Why a tetrahedron? Four classes in 3D
-
-Consider $C$ **distinct** points with one common positive squared distance $q$. Their squared-distance matrix is $D=q(\mathbf1\mathbf1^\top-I)$. Introduce the centering projector
+The APML gradient on proxy $k$ is
 
 $$
-J=I-\frac1C\mathbf1\mathbf1^\top.
+\frac{\partial L_{\mathrm{APML}}}{\partial w_k}
+=\frac{2}{N}\sum_{i=1}^{N}
+(h_{ik}-p_{ik})\frac{w_k-z_i}{1+\|z_i-w_k\|^2}
+$$
+
+For MES, the gradient on the proxy is
+
+$$
+\frac{\partial L_{\mathrm{MES}}}{\partial w_k}
+=\frac{4}{M}\sum_{j\ne k}(q_{jk}-\bar{q})(w_k-w_j)
+$$
+
+These expressions assume proxy vectors and encoder parameters are independently parameterized. The derivative of $\bar{q}$ cancels in the MES gradient because the deviations from their mean sum to zero.
+
+## 6. Why four classes can form a tetrahedron in 3D
+
+A regular tetrahedron has **four different vertices and six equal distances**. More generally, $C$ distinct equidistant points require at least $C-1$ dimensions.
+
+A compact proof uses their centered squared-distance matrix. If every off-diagonal squared distance equals the same positive number $q$, define
+
+$$
+D_{jk}=q\quad(j\ne k), \qquad D_{jj}=0
+$$
+
+and the centering matrix
+
+$$
+J=I-\frac{1}{C}\mathbf{1}\mathbf{1}^{T}
 $$
 
 The centered Gram matrix is
 
 $$
-\boxed{G=-\tfrac12 JDJ=\tfrac q2 J.}
+G=-\frac{1}{2}JDJ=\frac{q}{2}J
 $$
 
-Because $\operatorname{rank}(G)=\operatorname{rank}(J)=C-1$ and vectors in $\mathbb R^d$ have Gram rank no greater than $d$, one must have
+Because this Gram matrix has rank $C-1$, the embedding dimension must obey
 
 $$
-\boxed{d\ge C-1.}
+d\ge C-1
 $$
 
-Conversely, the vertices of a regular $(C-1)$-simplex realize that configuration. Thus $C=4$ and $d=3$ give a **regular tetrahedron**. One exact coordinate example is
+For $C=4$, the lower bound is $d=3$, so a regular tetrahedron is **geometrically feasible**. This does not guarantee gradient-based learning will converge to it.
+
+## 7. How uniformity relates to the smallest distance
+
+Writing $V=L_{\mathrm{MES}}$ and $q_{\min}$ for the smallest squared pair distance gives the bound
 
 $$
-(1,1,1),\ (1,-1,-1),\ (-1,1,-1),\ (-1,-1,1),
+q_{\min}\ge \bar{q}-\sqrt{(M-1)V}
 $$
 
-for which all six $q_{jk}=8$ and $V=0$.
+The bound says that *if the mean squared distance is held fixed*, a small MES variance limits how far the smallest distance can lie below the mean. **If the mean shrinks, reducing MES does not necessarily increase the smallest distance.**
 
-This is a *geometric feasibility result*, **not a convergence theorem** for APML+MES. In particular, six distinct equidistant points cannot exist in 3D; the octahedron is neither equidistant nor established here as an MES optimum.
-
-## An exact bound that explains distance uniformity
-
-Let $q_{\min}=\min_{j<k}q_{jk}$ and $\mu>0$. Since the $M$ deviations from the mean sum to zero, Cauchy–Schwarz implies
+A scale-free measure suitable for **displaying** geometry is the coefficient of variation
 
 $$
-\boxed{q_{\min}\ge\mu-\sqrt{(M-1)V(W)}.}
+\mathrm{CV}_{q}=\frac{\sqrt{V}}{\bar{q}}
 $$
 
-*Proof.* For the smallest distance, write $a=q_{\min}-\mu\le0$. The other $M-1$ deviations sum to $-a$, so their squared sum is at least $a^2/(M-1)$. Thus $M V\ge a^2+a^2/(M-1)=M a^2/(M-1)$, or $|a|\le\sqrt{(M-1)V}$. $\square$
+where $\bar{q}>0$. This is only an **analysis metric**, not a replacement for the original MES training loss.
 
-This is a **relative uniformity statement at a given mean distance**; it does not imply that decreasing $V$ increases $q_{\min}$, because the mean $\mu$ can change simultaneously.
+## 8. Scope and mathematical limitations
 
-For figures only, the dimensionless coefficient of variation
+- Translation and rotation of all proxies together leave MES unchanged.
+- Scaling all proxies by $s$ multiplies the **original** MES by $s^4$.
+- MES is identically zero for $C=2$ because there is only one pair.
+- Collapsed proxies and nondegenerate equal-distance configurations both attain zero MES.
+- Uniformity of pairwise distances does not establish improved generalization or test retrieval.
+- Three paired MNIST seeds show reproducible *training geometry* in the supplied study; they do not prove universal convergence.
 
-$$
-\mathrm{CV}_q=\frac{\sqrt{V}}{\mu}\qquad(\mu>0)
-$$
-
-helps compare *geometry* across different center scales. **It is a diagnostic, not the original MES loss and not a new training objective.**
-
-## Essential mathematical limits
-
-1. **Translation invariance:** $V(W+a)=V(W)$ for the same $a\in\mathbb R^d$ added to each proxy.
-2. **Rotation/reflection invariance:** any common orthogonal transform preserves $V$.
-3. **Fourth-order scaling:** $V(sW)=s^4V(W)$.
-4. **Degenerate global minima:** coincident centers give $V=0$ regardless of class count. The MES term does **not** enforce positive separation.
-5. **Two-class limitation:** for $C=2$ the only squared pair distance equals its mean, so $V\equiv0$.
-6. **Uniformity is not a packing guarantee:** minimizing variance is not equivalent to maximizing the minimum distance without constraints on the scale.
-7. **Optimization and generalization are separate questions:** geometry alone does not certify better retrieval, clustering, or performance on unseen classes.
-
-The mathematical results can be checked against [unit tests](../tests/), [analytic figures](../figures/README.md) and the [journal paper](https://doi.org/10.1016/j.patrec.2023.06.005).
+[Return to README](../README.md) · [Trained MNIST figures and provenance](mnist_c4_evidence.md) · [Original publication](https://doi.org/10.1016/j.patrec.2023.06.005)
