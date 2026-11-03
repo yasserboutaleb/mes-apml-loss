@@ -1,13 +1,21 @@
-# Figure inventory and provenance
+# Reproducible figure inventory
 
-Generate all figures locally using `python scripts/make_figures.py --out figures` with a fixed synthetic seed. **None are benchmark results or publisher figure reproductions.** Both SVG and PNG exports and `manifest.json` are created by the same script.
+All figures here are **computed or analytic** and must not be described as benchmark or real MNIST outcomes. The committed branch contains five SVG files. The PNG exports and provenance manifest are **generated locally**, not necessarily committed.
 
-| ID | Figure | Provenance |
+~~~bash
+python scripts/reproduce.py figures
+~~~
+
+That command calls the deterministic generator at scripts/make_figures.py, producing five SVGs, five PNGs, and figures/manifest.json. The manifest records the toy seed, optimizer parameters, numeric center positions and measured squared pair distances.
+
+| File | Type | Provenance |
 |---|---|---|
-| 01 | `01_toy_comparison.svg` | Synthetic fixed embeddings; trainable class proxies |
-| 02 | `02_objective_pipeline.svg` | Conceptual objective flow |
-| 03 | `03_ideal_tetrahedron.svg` | Analytic tetrahedron with six squared distances equal to 8 |
-| 04 | `04_six_squared_distances.svg` | Synthetic distances from figure 01 |
-| 05 | `05_dimensional_limit.svg` | Analytic tetrahedron and illustrative octahedron |
+| 01_toy_comparison.svg | Synthetic | Fixed generated embeddings; optimize proxies under APML vs APML+MES |
+| 02_objective_pipeline.svg | Conceptual | Shared-proxy APML/MES architecture |
+| 03_ideal_tetrahedron.svg | Analytic | Four coordinates with all six squared distances equal to 8 |
+| 04_six_squared_distances.svg | Synthetic | Distances from the same two runs used for 01 |
+| 05_dimensional_limit.svg | Analytic | Four-point simplex and six-point illustrative octahedron |
 
-The images in the source snapshot were generated locally, but the binary/image assets are not yet committed to this review branch. Run the script to generate them before reviewing the README layout or approving public release. Any real-data illustration requires a separately verified training provenance.
+**Interpretation:** a regular tetrahedron is feasible for four distinct class proxies in 3D. MES is the variance of squared distances, and zero variance also admits coincident centers. Do not portray the mathematical construction as a learned configuration or infer retrieval performance from a visually attractive synthetic plot.
+
+For real training data, run the separately documented MNIST experiment, preserve the raw snapshots and its configuration, and mark the figure as **measured MNIST training/holdout** with the actual seed and protocol. Do not copy images or unpublished data from the private research lab.
