@@ -1,84 +1,152 @@
-# Mathematical formulation — APML and original MES
+# MES-loss: concise mathematical formulation
 
-> Working mathematical note. Audited against the designated reference code; comparison to the full thesis and publisher's complete article is still pending. This note distinguishes equations from empirical claims.
+This note describes the **original 2023 APML+MES objective**, not a modified or scale-normalized regularizer. The notation and identities below are mathematical consequences of the stated loss. The code's implementation can be checked in [torch_backend.py](../src/mes_apml/torch_backend.py).
 
-## Setup
+## Setup: one set of shared, trainable class proxies
 
-Consider $N\ge1$ labeled inputs $(x_i,y_i)$ with $y_i\in\{0,\dots,C-1\}$, $C\ge2$. An encoder $f_\theta$ produces $z_i=f_\theta(x_i)\in\mathbb R^d$. The classifier has $C$ **trainable** class-proxy vectors $w_k\in\mathbb R^d$, collected in $W$. These are learned parameters, **not** mini-batch empirical class centroids.
+For $N$ labeled examples $(x_i,y_i)$, let $z_i=f_\theta(x_i)\in\mathbb R^d$. Let $W=(w_1,\ldots,w_C)$ be $C$ learnable class-proxy vectors, $w_k\in\mathbb R^d$. These proxies are the classification-head parameters **rather than empirical minibatch centroids**.
 
-## APML
-
-With $r_{ik}=\lVert z_i-w_k\rVert_2^2$ and affinity $a_{ik}=(1+r_{ik})^{-1}$,
-
-$$p_{ik}=\frac{a_{ik}}{\sum_{j=0}^{C-1}a_{ij}},\qquad
-\mathcal L_{\mathrm{APML}}=-\frac1N\sum_i \log p_{i,y_i}.$$
-
-Numerically stable computation uses $\ell_{ik}=\log(a_{ik})=-\log(1+r_{ik})$ and softmax cross-entropy over $\ell$. There is no cosine normalization, margin, or temperature in this formulation.
-
-Define $h_{ik}=\mathbf 1[y_i=k]$. By differentiating the log-normalized affinities,
+For each example and proxy, set
 
 $$
-\frac{\partial\mathcal L_{\mathrm{APML}}}{\partial z_i}
-=\frac2N\sum_k(h_{ik}-p_{ik})\frac{z_i-w_k}{1+r_{ik}},
+r_{ik}=\|z_i-w_k\|_2^2,\qquad
+\ell_{ik}=-\log(1+r_{ik}).
 $$
 
-$$
-\frac{\partial\mathcal L_{\mathrm{APML}}}{\partial w_k}
-=-\frac2N\sum_i(h_{ik}-p_{ik})\frac{z_i-w_k}{1+r_{ik}}.
-$$
-
-The sample-specific forces depend on the Cauchy denominator and the normalized probabilities. Describing APML as simply pulling positives and pushing negatives is an intuition, not a constant-force law.
-
-## Original MES
-
-Let $\mathcal P=\{(j,k):0\le j<k<C\}$ be the unordered set of distinct proxy pairs and $M=|\mathcal P|=C(C-1)/2$. Set
-
-$$q_{jk}=\lVert w_j-w_k\rVert_2^2,\qquad\mu=\frac1M\sum_{(j,k)\in\mathcal P}q_{jk}.$$
-
-Then
-
-$$\mathcal L_{\mathrm{MES}}=\frac1M\sum_{(j,k)\in\mathcal P}(q_{jk}-\mu)^2.$$
-
-**This is the population variance of squared Euclidean distances**, with divisor $M$ and each unordered pair counted once. It should not be replaced by the variance of ordinary distances or a variance with denominator $M-1$.
-
-Since $\sum_{(j,k)\in\mathcal P}(q_{jk}-\mu)=0$, differentiating the mean does not contribute an extra term to the final expression:
+The normalized Cauchy affinity is
 
 $$
-\boxed{\nabla_{w_k}\mathcal L_{\mathrm{MES}}=\frac4M\sum_{j\ne k}(q_{kj}-\mu)(w_k-w_j).}
+p_{ik}=\frac{e^{\ell_{ik}}}{\sum_{j=1}^C e^{\ell_{ij}}}
+      =\frac{(1+r_{ik})^{-1}}{\sum_{j=1}^C(1+r_{ij})^{-1}}.
 $$
 
-It is zero when every pairwise squared distance is equal. In particular, all-coincident weights are a zero-loss configuration. For $C=2$, the sole squared distance always equals its mean, so the loss and its gradient are identically zero.
+Thus, with $\operatorname{CE}$ denoting cross-entropy,
 
-## Joint training
+$$
+\boxed{\mathcal L_{\rm APML}
+=-\frac1N\sum_{i=1}^N\log p_{i,y_i}
+=\frac1N\sum_{i=1}^N\operatorname{CE}(\ell_i,y_i).}
+$$
 
-$$\mathcal L=\alpha\mathcal L_{\mathrm{APML}}+\beta\mathcal L_{\mathrm{MES}},\qquad \alpha,\beta\ge0.$$
+This is a logit-based *implementation* of the original Cauchy-affinity objective; it adds **no** new temperature, fixed margin, or L2 normalization.
 
-MES depends on $W$ but not directly on any $z_i$; hence $\partial\mathcal L_{\mathrm{MES}}/\partial z_i=0$. If $z_i=f_\theta(x_i)$ and $W$ is a separate trainable head parameter, the MES term has no **direct** gradient to $\theta$. In training, changing $W$ can indirectly alter later APML gradients to $\theta$.
+## MES: variance of squared distances
 
-## Geometric properties
+Let $\mathcal P=\{(j,k):1\le j<k\le C\}$ and $M=|\mathcal P|=\binom C2$. Define
 
-1. **Common translation:** replacing every $w_k$ by $w_k+a$ leaves each $q_{jk}$ and MES unchanged.
-2. **Uniform scaling:** replacing every $w_k$ by $sw_k$ sends $q_{jk}$ to $s^2q_{jk}$, $\mu$ to $s^2\mu$, and therefore $\mathcal L_{\mathrm{MES}}$ to $s^4\mathcal L_{\mathrm{MES}}$.
-3. **Orthogonal transformation:** $W\mapsto WQ$ for an orthogonal $Q$ also leaves all distances unchanged.
-4. **Zero variance is not a positive separation constraint:** $W=(w,\dots,w)$ gives MES $0$; at any fixed positive common distance, a nondegenerate equidistant configuration also gives MES $0$.
-5. **Variance is not max-min packing:** the loss contains no radius constraint, direct lower bound on $\min_{j<k}\|w_j-w_k\|$, or positive target edge length.
+$$
+q_{jk}=\|w_j-w_k\|_2^2,\qquad
+\mu=\frac1M\sum_{j<k}q_{jk}.
+$$
 
-## Dimension bound for equidistant distinct centers
+The original MES term is
 
-Suppose $C$ distinct points have the same positive squared pairwise distance $q>0$. The squared-distance matrix is $D=q(\mathbf 1\mathbf 1^\top-I)$, with zero diagonal. Let $J=I-C^{-1}\mathbf 1\mathbf 1^\top$ center coordinates. Classical distance geometry gives their centered Gram matrix
+$$
+\boxed{
+V(W)=\mathcal L_{\rm MES}(W)
+=\frac1M\sum_{j<k}(q_{jk}-\mu)^2.
+}
+$$
 
-$$G=-\tfrac12 JDJ=\tfrac q2 J.$$
+Each unordered pair is counted **once**; the divisor is $M$, not $M-1$. Squared distances are essential: this is **not** the variance of ordinary Euclidean distances.
 
-As $\mathrm{rank}(J)=C-1$ and every Gram matrix of points in $\mathbb R^d$ has rank at most $d$, necessarily $d\ge C-1$. Conversely, a centered regular simplex with $C$ vertices in $\mathbb R^{C-1}$ attains equality.
+The published composite loss is
 
-For $C=4,d=3$, one exact construction uses $(1,1,1)$, $(1,-1,-1)$, $(-1,1,-1)$, $(-1,-1,1)$: all six pairwise squared distances equal $8$. For $C=6$ or $8$ in $\mathbb R^3$, pairwise equidistance of *distinct* centers is impossible. This statement does not determine the shape reached by a learned model, and MES can still be zero at collapse.
+$$
+\boxed{\mathcal L(\theta,W)
+=\alpha\mathcal L_{\rm APML}(\theta,W)+\beta V(W),\qquad
+\alpha,\beta\ge0.}
+$$
 
-## Verification checklist
+Both terms act on the **same** $W$, making the regularizer directly relevant to the classification geometry.
 
-- Compare APML to a direct normalized-affinity calculation in float64.
-- Compare MES to an independently enumerated list of $M$ unique squared distances.
-- Compare analytic MES gradients to autograd and centered finite differences.
-- Verify $C=2$, collapse, exact tetrahedron, translation, $s^4$ scaling, and shared-$W$ gradient flow.
-- For any future TensorFlow backend, compare both values and both gradients on the same numeric arrays.
+## Gradients: how the two objectives influence learning
 
-[Back to README](../README.md)
+Define $h_{ik}=\mathbf1[y_i=k]$. For the embeddings and proxies, respectively,
+
+$$
+\boxed{\frac{\partial \mathcal L_{\rm APML}}{\partial z_i}
+=\frac2N\sum_{k=1}^C
+(h_{ik}-p_{ik})\frac{z_i-w_k}{1+r_{ik}}}
+$$
+
+and
+
+$$
+\boxed{\frac{\partial \mathcal L_{\rm APML}}{\partial w_k}
+=\frac2N\sum_{i=1}^N
+(h_{ik}-p_{ik})\frac{w_k-z_i}{1+r_{ik}}.}
+$$
+
+MES has an exact center gradient:
+
+$$
+\boxed{
+\nabla_{w_k}V
+=\frac4M\sum_{j\ne k}(q_{kj}-\mu)(w_k-w_j).
+}
+$$
+
+The contribution from differentiating $\mu$ cancels because $\sum_{j<k}(q_{jk}-\mu)=0$. MES contains no $z_i$, so for independently parametrized $W$ and $\theta$, it contributes **no direct** gradient to the encoder. The encoder can still be affected indirectly via later APML updates as the learned proxies change.
+
+## Why a tetrahedron? Four classes in 3D
+
+Consider $C$ **distinct** points with one common positive squared distance $q$. Their squared-distance matrix is $D=q(\mathbf1\mathbf1^\top-I)$. Introduce the centering projector
+
+$$
+J=I-\frac1C\mathbf1\mathbf1^\top.
+$$
+
+The centered Gram matrix is
+
+$$
+\boxed{G=-\tfrac12 JDJ=\tfrac q2 J.}
+$$
+
+Because $\operatorname{rank}(G)=\operatorname{rank}(J)=C-1$ and vectors in $\mathbb R^d$ have Gram rank no greater than $d$, one must have
+
+$$
+\boxed{d\ge C-1.}
+$$
+
+Conversely, the vertices of a regular $(C-1)$-simplex realize that configuration. Thus $C=4$ and $d=3$ give a **regular tetrahedron**. One exact coordinate example is
+
+$$
+(1,1,1),\ (1,-1,-1),\ (-1,1,-1),\ (-1,-1,1),
+$$
+
+for which all six $q_{jk}=8$ and $V=0$.
+
+This is a *geometric feasibility result*, **not a convergence theorem** for APML+MES. In particular, six distinct equidistant points cannot exist in 3D; the octahedron is neither equidistant nor established here as an MES optimum.
+
+## An exact bound that explains distance uniformity
+
+Let $q_{\min}=\min_{j<k}q_{jk}$ and $\mu>0$. Since the $M$ deviations from the mean sum to zero, Cauchy–Schwarz implies
+
+$$
+\boxed{q_{\min}\ge\mu-\sqrt{(M-1)V(W)}.}
+$$
+
+*Proof.* For the smallest distance, write $a=q_{\min}-\mu\le0$. The other $M-1$ deviations sum to $-a$, so their squared sum is at least $a^2/(M-1)$. Thus $M V\ge a^2+a^2/(M-1)=M a^2/(M-1)$, or $|a|\le\sqrt{(M-1)V}$. $\square$
+
+This is a **relative uniformity statement at a given mean distance**; it does not imply that decreasing $V$ increases $q_{\min}$, because the mean $\mu$ can change simultaneously.
+
+For figures only, the dimensionless coefficient of variation
+
+$$
+\mathrm{CV}_q=\frac{\sqrt{V}}{\mu}\qquad(\mu>0)
+$$
+
+helps compare *geometry* across different center scales. **It is a diagnostic, not the original MES loss and not a new training objective.**
+
+## Essential mathematical limits
+
+1. **Translation invariance:** $V(W+a)=V(W)$ for the same $a\in\mathbb R^d$ added to each proxy.
+2. **Rotation/reflection invariance:** any common orthogonal transform preserves $V$.
+3. **Fourth-order scaling:** $V(sW)=s^4V(W)$.
+4. **Degenerate global minima:** coincident centers give $V=0$ regardless of class count. The MES term does **not** enforce positive separation.
+5. **Two-class limitation:** for $C=2$ the only squared pair distance equals its mean, so $V\equiv0$.
+6. **Uniformity is not a packing guarantee:** minimizing variance is not equivalent to maximizing the minimum distance without constraints on the scale.
+7. **Optimization and generalization are separate questions:** geometry alone does not certify better retrieval, clustering, or performance on unseen classes.
+
+The mathematical results can be checked against [unit tests](../tests/), [analytic figures](../figures/README.md) and the [journal paper](https://doi.org/10.1016/j.patrec.2023.06.005).
