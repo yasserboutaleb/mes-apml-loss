@@ -288,7 +288,7 @@ def main():
     figure_01(args.out,toy)
     figure_02(args.out)
     figure_03(args.out)
-    figure_04(args.out)
+    figure_04(args.out,toy)
     figure_05(args.out)
     summary={
         "status":"synthetic_or_analytic_only",
