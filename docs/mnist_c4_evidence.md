@@ -18,7 +18,7 @@ These are author-supplied research artifacts; the public repository contains onl
 [Open figure 6](../figures/06_mnist_trained_proxies.svg).
 
 - Source: `runs/apml/embeddings.npz` and `runs/apml_mes/embeddings.npz` in the original C4 archive, seed 42.
-- Only the **four class-proxy vectors** from each trained checkpoint are drawn; dots representing test embeddings are **not shown in this concise figure**.
+- The diagram shows the **four class-proxy vectors** and **220 real MNIST test embeddings per arm** (55 randomly selected examples per digit). The same example IDs are used for both arms. The display sampling is deterministic, with NumPy generator seed **20231103**.
 - All four proxies are real trained vectors in `R^3`; their 2D positions are an **orthographic display projection** (azimuth -59°, elevation +19°), not a fitted 2D model.
 - Crucially, the six numbers accompanying the figure are the **actual Euclidean 3D distances** between proxy vectors, not projected distances. The projected 2D edge lengths are not all equal even for a true 3D regular tetrahedron.
 
