@@ -21,5 +21,6 @@ def test_distance_uniformity_bound_across_random_proxy_configurations():
 def test_tetrahedron_saturates_zero_variance_bound():
     w = torch.tensor([[1,1,1], [1,-1,-1], [-1,1,-1], [-1,-1,1]], dtype=torch.float64)
     q = torch.pdist(w).square()
-    assert float(q.min()) == float(q.mean()) == 8.0
+    assert math.isclose(float(q.min()), 8.0, rel_tol=0, abs_tol=1e-12)
+    assert math.isclose(float(q.mean()), 8.0, rel_tol=0, abs_tol=1e-12)
     assert float(mes_loss(w)) == 0.0
