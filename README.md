@@ -28,39 +28,45 @@ Let $z_i=f_\theta(x_i)$ be the embedding of input $x_i$, and let $w_k$ be the **
 
 Each embedding is assigned a Cauchy-affinity probability for every class:
 
-$$
+```math
 p_{ik}=\frac{(1+\|z_i-w_k\|^2)^{-1}}{\sum_j(1+\|z_i-w_j\|^2)^{-1}}
-$$
+```
 
 APML penalizes low probability for the correct class:
 
-$$
+```math
 \mathcal{L}_{\mathrm{APML}}=-\frac{1}{N}\sum_i\log p_{i,y_i}
-$$
+```
 
 In PyTorch, the same probabilities can be implemented stably using logits $-\log(1+\|z_i-w_k\|^2)$ with cross-entropy.
 
 ### 2. MES: encourage uniform distances between class centers
 
-Consider every distinct pair of trainable centers, and compute its **squared** Euclidean distance:
+Consider each **distinct pair** of trainable class centers. Its squared Euclidean distance is
 
-$$
-q_{jk}=\|w_j-w_k\|^2 \qquad (j<k)
-$$
+```math
+q_{jk}=\|w_j-w_k\|^2
+```
 
-MES is simply the population variance of these pairwise squared distances:
+There are **six pairs for four classes** (and $M=C(C-1)/2$ pairs in general). Number their squared distances $q_1,\ldots,q_M$. First compute their mean:
 
-$
-\mathcal{L}_{\mathrm{MES}}=\frac{1}{M}\sum_{j<k}(q_{jk}-\bar{q})^2
-$
+```math
+\mu=\frac{1}{M}\sum_{r=1}^{M}q_r
+```
 
-That is, the loss becomes small when the pairwise squared distances become similar. **MES does not prescribe how large those distances must be.** The exact finite-sum definition is in [the mathematical notes](docs/mathematical_formulation.md).
+MES is simply the **population variance** of these $M$ squared distances:
+
+```math
+\mathcal{L}_{\mathrm{MES}}=\frac{1}{M}\sum_{r=1}^{M}(q_r-\mu)^2
+```
+
+A small MES means the pairwise squared distances are similar; it does **not** fix their absolute length or prevent the class centers from collapsing.
 
 ### 3. Train the two objectives together
 
-$$
+```math
 \mathcal{L}=\alpha\,\mathcal{L}_{\mathrm{APML}}+\beta\,\mathcal{L}_{\mathrm{MES}}
-$$
+```
 
 **One set of class centers, two jobs:** APML learns discrimination; MES encourages a more regular arrangement of those same centers.
 
